@@ -180,17 +180,16 @@ Write-Host "[4/4] Configuring USB Serial Device COM Port..." -ForegroundColor Cy
 Write-Log "Searching for USB Serial Device COM ports..." "Info"
 
 try {
-    # Get ALL COM ports (not just "USB Serial Device")
-    $allComPorts = Get-WmiObject Win32_PnPEntity | Where-Object {
-        $_.Name -match "COM(\d+)"
-    }
-    
-    if ($allComPorts) {
-        # Extract COM port numbers and find the highest
+    # Only consider devices named exactly like "USB Serial Device (COM#)" under Ports (COM & LPT)
+    $usbSerialPorts = Get-WmiObject Win32_PnPEntity |
+        Where-Object { $_.PNPClass -eq 'Ports' -and $_.Name -match 'USB Serial Device\s*\(COM(\d+)\)' }
+
+    if ($usbSerialPorts) {
+        # Extract numbers and keep device metadata
         $comPorts = @()
-        Write-Host "Found the following COM ports:" -ForegroundColor Cyan
-        foreach ($port in $allComPorts) {
-            if ($port.Name -match "COM(\d+)") {
+        Write-Host "Found USB Serial Device COM ports:" -ForegroundColor Cyan
+        foreach ($port in $usbSerialPorts) {
+            if ($port.Name -match 'USB Serial Device\s*\(COM(\d+)\)') {
                 $comNumber = [int]$matches[1]
                 Write-Host "  - $($port.Name)" -ForegroundColor Gray
                 $comPorts += @{
@@ -200,44 +199,49 @@ try {
                 }
             }
         }
-        
-        # Sort and get the highest numbered port
+
+        # Highest numbered USB Serial Device
         $highestPort = $comPorts | Sort-Object -Property COMNumber -Descending | Select-Object -First 1
-        
-        Write-Log "Found COM ports: $($comPorts.Count)" "Info"
-        Write-Log "Highest numbered port: $($highestPort.Name)" "Info"
-        
+
+        Write-Log "Found USB Serial Device ports: $($comPorts.Count)" "Info"
+        Write-Log "Highest numbered USB Serial Device: $($highestPort.Name)" "Info"
+
         if ($highestPort.COMNumber -ne $TargetCOMPort) {
             Write-Host "Found: $($highestPort.Name)" -ForegroundColor Yellow
             Write-Host "Changing COM port to COM$TargetCOMPort..." -ForegroundColor Cyan
-            
-            # Change COM port using devcon or registry
+
             # Registry path for COM port configuration
             $deviceID = $highestPort.DeviceID
             $regPath = "HKLM:\SYSTEM\CurrentControlSet\Enum\$deviceID\Device Parameters"
-            
-            if (Test-Path $regPath) {
-                Set-ItemProperty -Path $regPath -Name "PortName" -Value "COM$TargetCOMPort" -ErrorAction Stop
-                Write-Log "Successfully changed $($highestPort.Name) to COM$TargetCOMPort" "Success"
-                Write-Host "✓ Successfully changed to COM$TargetCOMPort" -ForegroundColor Green
-                Write-Host "NOTE: You may need to restart the device or computer for changes to take effect." -ForegroundColor Yellow
+
+            if (Test-Path -LiteralPath $regPath) {
+                try {
+                    Set-ItemProperty -LiteralPath $regPath -Name "PortName" -Value "COM$TargetCOMPort" -ErrorAction Stop
+                    Write-Log "Successfully changed $($highestPort.Name) to COM$TargetCOMPort" "Success"
+                    Write-Host "✓ Successfully changed to COM$TargetCOMPort" -ForegroundColor Green
+                    Write-Host "NOTE: You may need to restart the device or computer for changes to take effect." -ForegroundColor Yellow
+                } catch {
+                    Write-Log "Failed to set PortName at: $regPath. Error: $_" "Error"
+                    Write-Host "✗ Failed to change COM port automatically" -ForegroundColor Red
+                    Write-Host "Please change it manually in Device Manager to COM$TargetCOMPort" -ForegroundColor Yellow
+                }
             } else {
                 Write-Log "Could not find registry path for device: $regPath" "Warning"
                 Write-Host "⚠ Could not automatically change COM port" -ForegroundColor Yellow
                 Write-Host "Please change it manually in Device Manager to COM$TargetCOMPort" -ForegroundColor Yellow
             }
         } else {
-            Write-Log "Device is already configured as COM$TargetCOMPort" "Success"
-            Write-Host "✓ Device is already configured as COM$TargetCOMPort" -ForegroundColor Green
+            Write-Log "USB Serial Device already configured as COM$TargetCOMPort" "Success"
+            Write-Host "✓ USB Serial Device already configured as COM$TargetCOMPort" -ForegroundColor Green
         }
     } else {
-        Write-Log "No COM ports found" "Warning"
-        Write-Host "⚠ No COM ports found" -ForegroundColor Yellow
+        Write-Log "No USB Serial Device COM ports found" "Warning"
+        Write-Host "⚠ No USB Serial Device COM ports found" -ForegroundColor Yellow
         Write-Host "The device may not be connected or drivers may need time to load" -ForegroundColor Yellow
     }
 } catch {
-    Write-Log "Error configuring COM port: $_" "Error"
-    Write-Host "⚠ Could not automatically configure COM port: $_" -ForegroundColor Yellow
+    Write-Log "Error configuring USB Serial Device COM port: $_" "Error"
+    Write-Host "⚠ Could not automatically configure USB Serial Device COM port: $_" -ForegroundColor Yellow
     Write-Host "Please configure COM$TargetCOMPort manually in Device Manager" -ForegroundColor Yellow
 }
 
