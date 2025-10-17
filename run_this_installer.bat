@@ -21,7 +21,7 @@ REM Change to the directory where this batch file is located
 cd /d "%~dp0"
 
 REM Run the PowerShell script with auto-elevation
-PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Install-IngenicoDriver.ps1"
+PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Ingenico_Driver_Install_Script.ps1"
 
 echo.
 echo Installation script completed.
