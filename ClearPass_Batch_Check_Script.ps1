@@ -22,7 +22,7 @@ param(
     [string]$OutputPath = "ClearPass_Results_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv",
     
     [Parameter(Mandatory=$true)]
-    [string]$ClearPassURL = "https://10.153.11.60",
+    [string]$ClearPassURL = "https://10.153.11.60/tips/tipsContent.action#tipsEndpoints.action",
     
     [Parameter(Mandatory=$true)]
     [string]$Username,
