@@ -22,7 +22,7 @@ param(
     [string]$OutputPath = "ClearPass_Results_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv",
     
     [Parameter(Mandatory=$true)]
-    [string]$ClearPassURL = "https://10.153.11.60/tips/tipsContent.action#tipsEndpoints.action",
+    [string]$ClearPassURL = "https://10.153.11.60",
     
     [Parameter(Mandatory=$true)]
     [string]$Username,
@@ -63,18 +63,51 @@ try {
     $devices = Get-Content $DeviceListPath | Where-Object { $_.Trim() -ne "" }
     Write-Host "Found $($devices.Count) devices to check" -ForegroundColor Green
     
-    # Setup Chrome options for self-signed certificates
-    $chromeOptions = New-Object OpenQA.Selenium.Chrome.ChromeOptions
-    $chromeOptions.AddArgument('--ignore-certificate-errors')
-    $chromeOptions.AddArgument('--ignore-ssl-errors')
-    $chromeOptions.AddArgument('--disable-gpu')
-    $chromeOptions.AddArgument('--no-sandbox')
-    $chromeOptions.AddArgument('--disable-dev-shm-usage')
-    # Comment out the next line if you want to see the browser
-    $chromeOptions.AddArgument('--headless')
+    # Detect which browser to use (Edge is preferred as it's built into Windows)
+    $browserType = "Edge"
+    $edgePath = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+    $chromePath = "C:\Program Files\Google\Chrome\Application\chrome.exe"
     
-    Write-Host "Launching Chrome WebDriver..." -ForegroundColor Yellow
-    $driver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($chromeOptions)
+    if (Test-Path $edgePath) {
+        $browserType = "Edge"
+        Write-Host "Using Microsoft Edge..." -ForegroundColor Yellow
+    }
+    elseif (Test-Path $chromePath) {
+        $browserType = "Chrome"
+        Write-Host "Using Google Chrome..." -ForegroundColor Yellow
+    }
+    else {
+        throw "Neither Microsoft Edge nor Google Chrome found. Please install one of these browsers."
+    }
+    
+    # Setup browser options for self-signed certificates
+    if ($browserType -eq "Edge") {
+        $edgeOptions = New-Object OpenQA.Selenium.Edge.EdgeOptions
+        $edgeOptions.AddArgument('--ignore-certificate-errors')
+        $edgeOptions.AddArgument('--ignore-ssl-errors')
+        $edgeOptions.AddArgument('--disable-gpu')
+        $edgeOptions.AddArgument('--no-sandbox')
+        $edgeOptions.AddArgument('--disable-dev-shm-usage')
+        # Comment out the next line if you want to see the browser
+        $edgeOptions.AddArgument('--headless')
+        
+        Write-Host "Launching Edge WebDriver..." -ForegroundColor Yellow
+        $driver = New-Object OpenQA.Selenium.Edge.EdgeDriver($edgeOptions)
+    }
+    else {
+        $chromeOptions = New-Object OpenQA.Selenium.Chrome.ChromeOptions
+        $chromeOptions.AddArgument('--ignore-certificate-errors')
+        $chromeOptions.AddArgument('--ignore-ssl-errors')
+        $chromeOptions.AddArgument('--disable-gpu')
+        $chromeOptions.AddArgument('--no-sandbox')
+        $chromeOptions.AddArgument('--disable-dev-shm-usage')
+        # Comment out the next line if you want to see the browser
+        $chromeOptions.AddArgument('--headless')
+        
+        Write-Host "Launching Chrome WebDriver..." -ForegroundColor Yellow
+        $driver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($chromeOptions)
+    }
+    
     $driver.Manage().Timeouts().ImplicitWait = [TimeSpan]::FromSeconds(10)
     
     # Navigate to ClearPass login
