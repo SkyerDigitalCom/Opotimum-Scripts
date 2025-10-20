@@ -2,7 +2,7 @@
 # Auto-elevates to admin and performs silent installation
 
 # Network drive path
-$networkPath = "\\emcnas-home.bmc.bmcroot.bmc.org\home"
+$networkPath = "\\emcnas-home.bmc.bmcroot.bmc.org\home\Wifi"
 
 # Driver installer paths
 $driverA7000 = Join-Path $networkPath "A7000.exe"
